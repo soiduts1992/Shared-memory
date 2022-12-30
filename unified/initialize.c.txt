@@ -1,0 +1,24 @@
+void initGrids(float* lattice, float* newLattice, float* f, float* feq, float rho, float ux, float uy, float tau)
+{
+    // Initialize density and velocity
+    float density = rho;
+    float velocityX = ux;
+    float velocityY = uy;
+
+    // Initialize probability grids
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            int index = i + j*N;
+            lattice[index] = density;
+            newLattice[index] = density;
+            for (int k = 0; k < M; k++)
+            {
+                float dotProduct = velocityX*CX[k] + velocityY*CY[k];
+                feq[index + k*N*N] = W[k] * density * (1.0f + 3.0f*dotProduct + 4.5f*dotProduct*dotProduct - 1.5f*(velocityX*velocityX + velocityY*velocityY));
+                f[index + k*N*N] = feq[index + k*N*N];
+            }
+        }
+    }
+}

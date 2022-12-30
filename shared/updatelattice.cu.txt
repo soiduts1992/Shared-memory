@@ -1,0 +1,42 @@
+__global__ void updateLattice(float* lattice, float* newLattice, float* f, float* feq, float omega, float tau)
+{
+    // Calculate indices for current thread
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int index = i + j*N;
+
+    // Skip if thread is out of bounds
+    if (i >= N || j >= N)
+        return;
+
+    // Calculate density and velocity at current cell
+    float density = 0.0f;
+    float velocityX = 0.0f;
+    float velocityY = 0.0f;
+    for (int k = 0; k < M; k++)
+    {
+        density += f[index + k*N*N];
+        velocityX += f[index + k*N*N] * CX[k];
+        velocityY += f[index + k*N*N] * CY[k];
+    }
+    velocityX /= density;
+    velocityY /= density;
+
+    // Calculate equilibrium distribution and collision
+    for (int k = 0; k < M; k++)
+    {
+        float dotProduct = velocityX*CX[k] + velocityY*CY[k];
+        feq[index + k*N*N] = W[k] * density * (1.0f + 3.0f*dotProduct + 4.5f*dotProduct*dotProduct - 1.5f*(velocityX*velocityX + velocityY*velocityY));
+        f[index + k*N*N] = omega * feq[index + k*N*N] + (1.0f - omega) * f[index + k*N*N];
+    }
+
+    // Streaming
+    for (int k = 0; k < M; k++)
+    {
+        int ni = i + CX[k];
+        int nj = j + CY[k];
+        if (ni >= N) ni -= N;
+        if (nj >= N) nj -= N;
+        newLattice[ni + nj*N] = f[index + k*N*N];
+    }
+}
